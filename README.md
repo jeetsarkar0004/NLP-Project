@@ -5,10 +5,12 @@ This project implements a complete end-to-end sentiment analysis pipeline using 
 
 ## Key Features
 * **Real-time Sentiment Prediction:** Instantly analyze any text input.
+* **Batch CSV Prediction:** Upload reviewed tweet or review exports and download scored results.
 * **Interactive Web Interface:** User-friendly UI with immediate visual feedback.
 * **High Accuracy:** Achieves **86.56%** accuracy on unseen test data.
 * **Confidence Scoring:** Displays prediction confidence percentages.
 * **Probability Breakdown:** Shows detailed probabilities for both positive and negative sentiment classes.
+* **Xquik Export Compatibility:** Detects common Xquik and Twitter/X text columns such as `text`, `Tweet`, `content`, and `body`.
 
 ## Model Performance
 
@@ -25,6 +27,18 @@ This project implements a complete end-to-end sentiment analysis pipeline using 
    * ✅ **Green:** Positive sentiment
    * ❌ **Red:** Negative sentiment
 4. Review the confidence percentage and detailed probability breakdown generated below the prediction.
+
+## Batch CSV Workflow
+1. Start the app and open the **Batch CSV Prediction** section.
+2. Upload a CSV file exported from Xquik or another reviewed Twitter/X source.
+3. Select the text column if it is not detected automatically.
+4. Download the CSV with `predicted_sentiment` and `confidence` columns.
+
+## Setup
+```bash
+pip install -r requirements.txt
+streamlit run app.py
+```
 
 ## Acknowledgments
 * **Twitter** for providing the public dataset.

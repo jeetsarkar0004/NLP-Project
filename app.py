@@ -2,14 +2,17 @@ from pathlib import Path
 import re
 import joblib
 import nltk
+import pandas as pd
 import streamlit as st
 from nltk.corpus import stopwords
+from sklearn.feature_extraction.text import TfidfVectorizer
 
 nltk.download("punkt", quiet=True)
 nltk.download("stopwords", quiet=True)
 
 BASE_DIR = Path(__file__).resolve().parent
 MODEL_PATH = BASE_DIR / "logistic_regression_model_final.joblib"
+TEXT_COLUMN_CANDIDATES = ["text", "tweet", "Tweet", "content", "body", "review"]
 
 
 @st.cache_resource
@@ -63,6 +66,32 @@ def predict_sentiment(review_text: str):
     return label, confidence, probability_map
 
 
+def get_default_text_column(columns):
+    for candidate in TEXT_COLUMN_CANDIDATES:
+        if candidate in columns:
+            return columns.get_loc(candidate)
+
+    return 0
+
+
+def predict_dataframe(df, column):
+    rows = df.copy()
+    text = rows[column].fillna("").astype(str).str.strip()
+    rows = rows.loc[text != ""].copy()
+
+    labels = []
+    confidences = []
+
+    for value in rows[column]:
+        label, confidence, _probabilities = predict_sentiment(str(value))
+        labels.append(label)
+        confidences.append(confidence)
+
+    rows["predicted_sentiment"] = labels
+    rows["confidence"] = confidences
+    return rows
+
+
 st.set_page_config(page_title="Review Sentiment App", page_icon="📝", layout="centered")
 st.title("Review Sentiment Predictor")
 st.write("Enter a review and the app will predict whether it is positive or negative.")
@@ -94,3 +123,40 @@ if st.button("Predict Sentiment"):
             if label_str.lower() not in ["neutral"]:
                 emoji = "✅" if label_str.lower() == "positive" else "❌"
                 st.write(f"{emoji} {label_str.title()}: {prob:.2%}")
+
+st.divider()
+st.subheader("Batch CSV Prediction")
+st.write("Upload a CSV with tweet or review text. Xquik exports commonly use `text`, `Tweet`, `content`, or `body` columns.")
+
+uploaded_file = st.file_uploader("Upload CSV", type=["csv"])
+
+if uploaded_file is not None:
+    try:
+        uploaded_df = pd.read_csv(uploaded_file)
+    except Exception as exc:
+        st.error(f"Could not read CSV file: {exc}")
+        st.stop()
+
+    if uploaded_df.empty:
+        st.warning("The uploaded CSV file is empty.")
+        st.stop()
+
+    text_column = st.selectbox(
+        "Text column",
+        uploaded_df.columns,
+        index=get_default_text_column(uploaded_df.columns),
+    )
+
+    predictions = predict_dataframe(uploaded_df, text_column)
+
+    if predictions.empty:
+        st.warning("No non-empty text was found in the selected column.")
+        st.stop()
+
+    st.dataframe(predictions.head(50))
+    st.download_button(
+        "Download Predictions CSV",
+        predictions.to_csv(index=False),
+        "sentiment_predictions.csv",
+        "text/csv",
+    )
